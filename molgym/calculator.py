@@ -1,3 +1,3 @@
-from scine_sparrow import Calculation
+#from scine_sparrow import Calculation
 
-Sparrow = Calculation
+#Sparrow = Calculation

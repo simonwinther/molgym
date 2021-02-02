@@ -4,8 +4,7 @@ from typing import Tuple, Dict
 
 import ase.data
 from ase import Atoms, Atom
-
-from molgym.calculator import Sparrow
+from ase.calculators.dftb import Dftb
 
 
 class MolecularReward(abc.ABC):
@@ -20,7 +19,24 @@ class MolecularReward(abc.ABC):
 
 class InteractionReward(MolecularReward):
     def __init__(self) -> None:
-        self.calculator = Sparrow('PM6')
+        self.calculator = Dftb(Hamiltonian_='DFTB', Hamiltonian_SCC='Yes',
+                               Hamiltonian_SCCTolerance=1e-8,
+                               Hamiltonian_MaxAngularMomentum_='',
+                               Hamiltonian_MaxAngularMomentum_Br='d',
+                               Hamiltonian_MaxAngularMomentum_C='p',
+                               Hamiltonian_MaxAngularMomentum_Ca='p',
+                               Hamiltonian_MaxAngularMomentum_Cl='d',
+                               Hamiltonian_MaxAngularMomentum_F='p',
+                               Hamiltonian_MaxAngularMomentum_H='s',
+                               Hamiltonian_MaxAngularMomentum_I='d',
+                               Hamiltonian_HubbardDerivs_='',
+                               Hamiltonian_HubbardDerivs_Br=-0.0573,
+                               Hamiltonian_HubbardDerivs_C=-0.1492,
+                               Hamiltonian_HubbardDerivs_Ca=-0.0340,
+                               Hamiltonian_HubbardDerivs_Cl=-0.0697,
+                               Hamiltonian_HubbardDerivs_F=-0.1623,
+                               Hamiltonian_HubbardDerivs_H=-0.1857,
+                               Hamiltonian_HubbardDerivs_I=-0.0433)
 
         self.settings = {
             'molecular_charge': 0,
@@ -37,7 +53,8 @@ class InteractionReward(MolecularReward):
         all_atoms.append(new_atom)
 
         e_tot = self._calculate_energy(all_atoms)
-        e_parts = self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom)
+        e_parts = self._calculate_energy(
+            atoms) + self._calculate_atomic_energy(new_atom)
         delta_e = e_tot - e_parts
 
         elapsed = time.time() - start
@@ -61,8 +78,10 @@ class InteractionReward(MolecularReward):
         if len(atoms) == 0:
             return 0.0
 
-        self.calculator.set_elements(list(atoms.symbols))
-        self.calculator.set_positions(atoms.positions)
-        self.settings['spin_multiplicity'] = self.get_minimum_spin_multiplicity(atoms)
-        self.calculator.set_settings(self.settings)
-        return self.calculator.calculate_energy()
+        # self.calculator.set_elements(list(atoms.symbols))
+        # self.calculator.set_positions(atoms.positions)
+        #self.settings['spin_multiplicity'] = self.get_minimum_spin_multiplicity(atoms)
+        # self.calculator.set_settings(self.settings)
+        # return self.calculator.calculate_energy()
+        atoms.calc = self.calculator
+        return atoms.get_potential_energy()
