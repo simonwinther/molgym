@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--bag_symbols',
                         help='symbols representing elements in bag (comma separated)',
                         type=str,
-                        default='H,He,Li,Be,B,C,N,O,F')
+                        default='H,O')
 
     # Environment
     parser.add_argument('--formulas',
@@ -51,6 +51,10 @@ def parse_args() -> argparse.Namespace:
                         type=float,
                         default=2.0)
     parser.add_argument('--min_reward', help='minimum reward given by environment', type=float, default=-0.6)
+
+    parser.add_argument('--rho', help='', type=float, default=0.01)
+    parser.add_argument('--bag_refills', help='', type=int, default=0)
+    parser.add_argument('--starting_canvas', help='', type=str, default='')
 
     # Model
     parser.add_argument('--min_mean_distance', help='minimum mean distance', type=float, default=0.8)
@@ -143,7 +147,7 @@ def main() -> None:
     var_counts = util.count_vars(model)
     logging.info(f'Number of parameters: {var_counts}')
 
-    reward = InteractionReward()
+    reward = InteractionReward(config['rho'])
 
     # Evaluation formulas
     if not config['eval_formulas']:
@@ -151,6 +155,8 @@ def main() -> None:
 
     train_formulas = parse_formulas(config['formulas'])
     eval_formulas = parse_formulas(config['eval_formulas'])
+
+    initial_formula = config['formulas']
 
     logging.info(f'Training bags: {train_formulas}')
     logging.info(f'Evaluation bags: {eval_formulas}')
@@ -167,6 +173,8 @@ def main() -> None:
         min_atomic_distance=config['min_atomic_distance'],
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
+        bag_refills=config['bag_refills'],
+        initial_formula=initial_formula,
     )
 
     eval_env = MolecularEnvironment(
@@ -177,6 +185,8 @@ def main() -> None:
         min_atomic_distance=config['min_atomic_distance'],
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
+        bag_refills=config['bag_refills'],
+        initial_formula=initial_formula,
     )
 
     rollout_saver = RolloutSaver(directory=config['data_dir'], tag=tag, all_ranks=config['all_ranks'])

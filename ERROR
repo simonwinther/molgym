@@ -1,0 +1,39 @@
+Traceback (most recent call last):
+  File "/home/simon/dev/thesis/xtb-python/xtb/ase/calculator.py", line 231, in calculate
+    self._res = self._xtb.singlepoint(self._res)
+  File "/home/simon/dev/thesis/xtb-python/xtb/interface.py", line 814, in singlepoint
+    raise XTBException(self.get_error("Single point calculation failed"))
+xtb.interface.XTBException: Single point calculation failed:
+-4- xtb_calculator_singlepoint: Electronic structure method terminated
+-3- scf: Self consistent charge iterator terminated
+-2- scc_core: Diagonalization of Hamiltonian failed
+-1- mctc_lapack_sygvd: Failed to solve eigenvalue problem
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/simon/PycharmProjects/molgym/scripts/run.py", line 217, in <module>
+    main()
+  File "/home/simon/PycharmProjects/molgym/scripts/run.py", line 189, in main
+    ppo(
+  File "/home/simon/PycharmProjects/molgym/molgym/ppo.py", line 275, in ppo
+    rollout_info = rollout(ac=ac, env=env, buffer=buffer, num_steps=local_steps_per_iter)
+  File "/home/simon/PycharmProjects/molgym/molgym/ppo.py", line 117, in rollout
+    next_obs, reward, done, _ = env.step(ac.to_action_space(action=a, observation=obs))
+  File "/home/simon/PycharmProjects/molgym/molgym/environment.py", line 62, in step
+    reward, info = self.reward.calculate(self.current_atoms, new_atom)
+  File "/home/simon/PycharmProjects/molgym/molgym/reward.py", line 32, in calculate
+    e_tot = self._calculate_energy(all_atoms)
+  File "/home/simon/PycharmProjects/molgym/molgym/reward.py", line 61, in _calculate_energy
+    return atoms.get_potential_energy()
+  File "/home/simon/.local/lib/python3.8/site-packages/ase/atoms.py", line 700, in get_potential_energy
+    energy = self._calc.get_potential_energy(self)
+  File "/home/simon/.local/lib/python3.8/site-packages/ase/calculators/calculator.py", line 642, in get_potential_energy
+    energy = self.get_property('energy', atoms)
+  File "/home/simon/.local/lib/python3.8/site-packages/ase/calculators/calculator.py", line 695, in get_property
+    self.calculate(atoms, [name], system_changes)
+  File "/home/simon/dev/thesis/xtb-python/xtb/ase/calculator.py", line 233, in calculate
+    raise ase_calc.CalculationFailed("xtb could not evaluate input")
+ase.calculators.calculator.CalculationFailed: xtb could not evaluate input
+
+Process finished with exit code 1

@@ -1,0 +1,4 @@
+        if done and self.bag_refills > 0:
+            self.current_formula = ase.formula.Formula(self.initial_formula)
+            done = False
+            self.bag_refills -= 1
