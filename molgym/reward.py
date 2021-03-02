@@ -66,4 +66,4 @@ class InteractionReward(MolecularReward):
             return 0
 
     def _calculate_distance(self, atom: Atom):
-        return np.linalg.norm((0, 0, 0) - atom.position)
+        return np.linalg.norm((0, 0, 0)-atom.position)

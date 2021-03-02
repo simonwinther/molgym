@@ -73,13 +73,7 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
         self.current_atoms.append(new_atom)
         self.current_formula = util.remove_from_formula(self.current_formula, new_atom.symbol)
 
-        print('Current formula: {}. Bag refills: {}'.format(self.current_formula, self.bag_refills))
-        if(len(self.current_formula) == 0) and self.bag_refills > 5:
-            print('Refelling bag: {}. The current atoms are: {}'.format(self.current_formula, self.current_atoms))
-            self.current_formula = ase.formula.Formula(self.initial_formula)
-            self.bag_refills -= 1
-            print('Bag has been refilled: {}. Refills left: {}'.format(self.current_formula, self.bag_refills))
-
+        print(self.current_formula)
         # Check if state is terminal
         if self._is_terminal():
             done = True
@@ -136,7 +130,7 @@ class MolecularEnvironment(AbstractMolecularEnvironment):
         self.reset()
 
     def reset(self) -> ObservationType:
-        self.current_atoms = Atoms('F')
+        self.current_atoms = molecule('CH3CH2OH') # Atoms('F')
         self.current_formula = next(self.formulas_cycle)
-        self.bag_refills = 5
+        self.bag_refills = 0
         return self.observation_space.build(self.current_atoms, self.current_formula)
