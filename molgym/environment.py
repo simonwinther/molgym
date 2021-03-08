@@ -14,18 +14,16 @@ from molgym.tools import util
 
 
 class AbstractMolecularEnvironment(gym.Env, abc.ABC):
-    # Negative reward should be on the same order of magnitude as the positive ones.
-    # Memory agent on QM9: mean 0.26, std 0.13, min -0.54, max 1.23 (negative reward indeed possible
     def __init__(
         self,
         reward: InteractionReward,
         observation_space: ObservationSpace,
         action_space: ActionSpace,
-        initial_formula: ase.formula.Formula,
+        initial_formula,
         min_atomic_distance=0.6,  # Angstrom
         max_h_distance=2.0,  # Angstrom
         min_reward=-0.6,  # Hartree
-        bag_refills=0,
+        bag_refills=5,
     ):
         self.reward = reward
         self.observation_space = observation_space
@@ -42,8 +40,10 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
 
         self.bag_refills = bag_refills
         self.initial_formula = initial_formula
+        print(self.initial_formula[-1].count())
+    # Negative reward should be on the same order of magnitude as the positive ones.
+    # Memory agent on QM9: mean 0.26, std 0.13, min -0.54, max 1.23 (negative reward indeed possible
     # but avoidable and probably due to PM6)
-
 
     @abc.abstractmethod
     def reset(self) -> ObservationType:
@@ -73,7 +73,10 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
         self.current_atoms.append(new_atom)
         self.current_formula = util.remove_from_formula(self.current_formula, new_atom.symbol)
 
-        print(self.current_formula)
+        if len(self.current_formula) == 0 and self.bag_refills > 0:
+            self.current_formula = self.initial_formula[-1]
+            self.bag_refills -= 1
+
         # Check if state is terminal
         if self._is_terminal():
             done = True
@@ -130,7 +133,7 @@ class MolecularEnvironment(AbstractMolecularEnvironment):
         self.reset()
 
     def reset(self) -> ObservationType:
-        self.current_atoms = molecule('CH3CH2OH') # Atoms('F')
+        self.current_atoms = molecule('F')
         self.current_formula = next(self.formulas_cycle)
-        self.bag_refills = 0
+        self.bag_refills = 5
         return self.observation_space.build(self.current_atoms, self.current_formula)

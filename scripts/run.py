@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--bag_symbols',
                         help='symbols representing elements in bag (comma separated)',
                         type=str,
-                        default='H,O')
+                        default='H,He,Li,Be,B,C,N,O,F')
 
     # Environment
     parser.add_argument('--formulas',
@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--min_reward', help='minimum reward given by environment', type=float, default=-0.6)
 
     parser.add_argument('--rho', help='', type=float, default=0.01)
-    parser.add_argument('--bag_refills', help='', type=int, default=0)
+    parser.add_argument('--bag_refills', help='', type=int, default=5)
     parser.add_argument('--starting_canvas', help='', type=str, default='')
 
     # Model
@@ -156,7 +156,8 @@ def main() -> None:
     train_formulas = parse_formulas(config['formulas'])
     eval_formulas = parse_formulas(config['eval_formulas'])
 
-    initial_formula = config['formulas']
+    train_init_formulas = parse_formulas(config['formulas'])
+    eval_init_formulas = parse_formulas(config['eval_formulas'])
 
     logging.info(f'Training bags: {train_formulas}')
     logging.info(f'Evaluation bags: {eval_formulas}')
@@ -173,8 +174,8 @@ def main() -> None:
         min_atomic_distance=config['min_atomic_distance'],
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
-        bag_refills=config['bag_refills'],
-        initial_formula=initial_formula,
+        initial_formula=train_init_formulas,
+        bag_refills=5,
     )
 
     eval_env = MolecularEnvironment(
@@ -185,8 +186,8 @@ def main() -> None:
         min_atomic_distance=config['min_atomic_distance'],
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
-        bag_refills=config['bag_refills'],
-        initial_formula=initial_formula,
+        initial_formula=eval_init_formulas,
+        bag_refills=5,
     )
 
     rollout_saver = RolloutSaver(directory=config['data_dir'], tag=tag, all_ranks=config['all_ranks'])
