@@ -11,7 +11,7 @@ from molgym.agents.base import AbstractActorCritic
 from molgym.buffer import PPOBuffer
 from molgym.environment import AbstractMolecularEnvironment
 from molgym.tools.mpi import mpi_avg, mpi_avg_grads, get_num_procs, mpi_sum, mpi_mean_std
-from molgym.tools.util import RolloutSaver, to_numpy, ModelIO, InfoSaver
+from molgym.tools.util import RolloutSaver, to_numpy, ModelIO, InfoSaver, StructureSaver
 
 
 def compute_loss(ac: AbstractActorCritic, data: dict, clip_ratio: float, vf_coef: float,
@@ -193,6 +193,7 @@ def ppo(
     save_train_rollout=False,
     save_eval_rollout=True,
     info_saver: Optional[InfoSaver] = None,
+    structure_saver: Optional[StructureSaver] = None,
 ):
     """
     Proximal Policy Optimization (by clipping), with early stopping based on approximate KL
@@ -252,6 +253,8 @@ def ppo(
         :param save_eval_rollout: Save evaluation rollout
 
         :param info_saver: Save statistics
+
+        :param structure_saver: Save images of evaluated atoms
     """
     eval_buffer_size = 1000
 
@@ -327,6 +330,11 @@ def ppo(
             # Safe evaluation buffer
             if rollout_saver and save_eval_rollout:
                 rollout_saver.save(eval_buffer, num_steps=total_num_steps, info='eval')
+
+            # Write image of current atoms0
+            if structure_saver and ((iteration % 20 == 0) or (iteration == max_num_iterations - 1)):
+                atoms, _ = eval_env.observation_space.parse(eval_buffer.next_obs_buf[eval_buffer.ptr-1])
+                structure_saver.save(name=str(iteration), obj=atoms)
 
         # Save model
         if model_handler and ((iteration % save_freq == 0) or (iteration == max_num_iterations - 1)):

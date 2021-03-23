@@ -19,11 +19,11 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
         reward: InteractionReward,
         observation_space: ObservationSpace,
         action_space: ActionSpace,
+        bag_refills: int,
         initial_formula,
         min_atomic_distance=0.6,  # Angstrom
         max_h_distance=2.0,  # Angstrom
         min_reward=-0.6,  # Hartree
-        bag_refills=5,
     ):
         self.reward = reward
         self.observation_space = observation_space
@@ -40,7 +40,6 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
 
         self.bag_refills = bag_refills
         self.initial_formula = initial_formula
-        print(self.initial_formula[-1].count())
     # Negative reward should be on the same order of magnitude as the positive ones.
     # Memory agent on QM9: mean 0.26, std 0.13, min -0.54, max 1.23 (negative reward indeed possible
     # but avoidable and probably due to PM6)
@@ -129,11 +128,14 @@ class MolecularEnvironment(AbstractMolecularEnvironment):
         super().__init__(*args, **kwargs)
 
         self.formulas = formulas
+        self.init_refills = kwargs['bag_refills']
+        self.bag_refills = kwargs['bag_refills']
         self.formulas_cycle = itertools.cycle(formulas)
         self.reset()
 
     def reset(self) -> ObservationType:
-        self.current_atoms = molecule('F')
+        self.current_atoms = molecule('CH3OH')
+        # self.current_atoms.set_initial_charges([-1])
         self.current_formula = next(self.formulas_cycle)
-        self.bag_refills = 5
+        self.bag_refills = self.init_refills
         return self.observation_space.build(self.current_atoms, self.current_formula)

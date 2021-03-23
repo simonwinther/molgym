@@ -10,7 +10,7 @@ from molgym.ppo import ppo
 from molgym.reward import InteractionReward
 from molgym.spaces import ActionSpace, ObservationSpace
 from molgym.tools import mpi, util
-from molgym.tools.util import RolloutSaver, InfoSaver, parse_formulas
+from molgym.tools.util import RolloutSaver, InfoSaver, parse_formulas, StructureSaver
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,10 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--seed', help='run ID', type=int, default=0)
 
     # Directories
-    parser.add_argument('--log_dir', help='directory for log files', type=str, default='logs')
-    parser.add_argument('--model_dir', help='directory for model files', type=str, default='models')
-    parser.add_argument('--data_dir', help='directory for saved rollouts', type=str, default='data')
-    parser.add_argument('--results_dir', help='directory for results', type=str, default='results')
+    parser.add_argument('--log_dir', help='directory for log files', type=str, default='../logs')
+    parser.add_argument('--model_dir', help='directory for model files', type=str, default='../models')
+    parser.add_argument('--data_dir', help='directory for saved rollouts', type=str, default='../data')
+    parser.add_argument('--results_dir', help='directory for results', type=str, default='../results')
+    parser.add_argument('--structures_dir', help='directory for traj files of structures', type=str, default='../structures')
 
     # Spaces
     parser.add_argument('--canvas_size',
@@ -120,7 +121,8 @@ def main() -> None:
 
     config = get_config()
 
-    util.create_directories([config['log_dir'], config['model_dir'], config['data_dir'], config['results_dir']])
+    util.create_directories([config['log_dir'], config['model_dir'], config['data_dir'],
+                             config['results_dir'], config['structures_dir']])
 
     tag = util.get_tag(config)
     util.setup_logger(config, directory=config['log_dir'], tag=tag)
@@ -175,7 +177,7 @@ def main() -> None:
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
         initial_formula=train_init_formulas,
-        bag_refills=5,
+        bag_refills=config['bag_refills'],
     )
 
     eval_env = MolecularEnvironment(
@@ -187,11 +189,12 @@ def main() -> None:
         max_h_distance=config['max_h_distance'],
         min_reward=config['min_reward'],
         initial_formula=eval_init_formulas,
-        bag_refills=5,
+        bag_refills=config['bag_refills'],
     )
 
     rollout_saver = RolloutSaver(directory=config['data_dir'], tag=tag, all_ranks=config['all_ranks'])
     info_saver = InfoSaver(directory=config['results_dir'], tag=tag)
+    image_saver = StructureSaver(directory=config['structures_dir'], tag=tag)
 
     ppo(
         env=env,
@@ -217,6 +220,7 @@ def main() -> None:
         save_train_rollout=config['save_rollouts'] == 'train' or config['save_rollouts'] == 'all',
         save_eval_rollout=config['save_rollouts'] == 'eval' or config['save_rollouts'] == 'all',
         info_saver=info_saver,
+        structure_saver=image_saver,
     )
 
 
