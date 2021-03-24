@@ -21,11 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--seed', help='run ID', type=int, default=0)
 
     # Directories
-    parser.add_argument('--log_dir', help='directory for log files', type=str, default='../logs')
-    parser.add_argument('--model_dir', help='directory for model files', type=str, default='../models')
-    parser.add_argument('--data_dir', help='directory for saved rollouts', type=str, default='../data')
-    parser.add_argument('--results_dir', help='directory for results', type=str, default='../results')
-    parser.add_argument('--structures_dir', help='directory for traj files of structures', type=str, default='../structures')
+    parser.add_argument('--log_dir', help='directory for log files', type=str, default='logs')
+    parser.add_argument('--model_dir', help='directory for model files', type=str, default='models')
+    parser.add_argument('--data_dir', help='directory for saved rollouts', type=str, default='data')
+    parser.add_argument('--results_dir', help='directory for results', type=str, default='results')
+    parser.add_argument('--structures_dir', help='directory for traj files of structures', type=str, default='structures')
 
     # Spaces
     parser.add_argument('--canvas_size',
@@ -118,6 +118,7 @@ def build_model(config: dict, observation_space: ObservationSpace, action_space:
 
 def main() -> None:
     util.set_one_thread()
+    # torch.set_num_threads(24)
 
     config = get_config()
 

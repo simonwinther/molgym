@@ -4,7 +4,7 @@ from typing import Tuple, Dict
 
 import ase.data
 from ase import Atoms, Atom
-from xtb.ase.calculator import XTB
+from xtb.calculators import GFN2
 from ase.calculators.calculator import CalculationFailed
 import numpy as np
 
@@ -21,7 +21,7 @@ class MolecularReward(abc.ABC):
 
 class InteractionReward(MolecularReward):
     def __init__(self, rho) -> None:
-        self.calculator = XTB(method="GFN2-xTB")
+        self.calculator = GFN2()
         self.atom_energies: Dict[str, float] = {}
         self.rho = rho
 
@@ -43,8 +43,8 @@ class InteractionReward(MolecularReward):
             dist = self._calculate_distance(new_atom)
 
             reward = reward - (dist * self.rho)
-        except CalculationFailed as e:
-            reward = 0
+        except Exception as e:
+            reward = -1.00
             elapsed = time.time() - start
         info = {
             'elapsed_time': elapsed,
@@ -63,7 +63,8 @@ class InteractionReward(MolecularReward):
         if len(atoms) == 0:
             return 0.0
 
-        atoms.calc = self.calculator
+        # atoms.calc = self.calculator
+        atoms.set_calculator(self.calculator)
         return atoms.get_potential_energy()
 
     def _calculate_distance(self, atom: Atom):

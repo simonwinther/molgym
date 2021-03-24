@@ -134,8 +134,9 @@ class MolecularEnvironment(AbstractMolecularEnvironment):
         self.reset()
 
     def reset(self) -> ObservationType:
-        self.current_atoms = molecule('CH3OH')
-        # self.current_atoms.set_initial_charges([-1])
+        # self.current_atoms = molecule('CH3OH')
+        self.current_atoms = molecule('F')
+        self.current_atoms.set_initial_charges([-1])
         self.current_formula = next(self.formulas_cycle)
         self.bag_refills = self.init_refills
         return self.observation_space.build(self.current_atoms, self.current_formula)
