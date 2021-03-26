@@ -1,6 +1,7 @@
 import abc
 import time
 from typing import Tuple, Dict
+import math
 
 import ase.data
 from ase import Atoms, Atom
@@ -43,6 +44,11 @@ class InteractionReward(MolecularReward):
             dist = self._calculate_distance(new_atom)
 
             reward = reward - (dist * self.rho)
+            if math.isnan(reward):
+                print('{}'.format(e_tot))
+                print('{}'.format(e_parts))
+                print('{}'.format(dist))
+
         except Exception as e:
             reward = -1.00
             elapsed = time.time() - start
@@ -50,6 +56,9 @@ class InteractionReward(MolecularReward):
             'elapsed_time': elapsed,
         }
 
+        if math.isnan(reward):
+            reward = -1.00
+            info = {'elapsed_time': 'nan' }
         return reward, info
 
     def _calculate_atomic_energy(self, atom: Atom) -> float:

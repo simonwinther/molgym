@@ -169,6 +169,8 @@ def main() -> None:
     if not config['num_eval_episodes']:
         config['num_eval_episodes'] = len(eval_formulas)
 
+    print(config['bag_refills'])
+
     env = MolecularEnvironment(
         reward=reward,
         observation_space=observation_space,

@@ -6,13 +6,13 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import torch
 from torch.optim import Adam
+from ase import io
 
 from molgym.agents.base import AbstractActorCritic
 from molgym.buffer import PPOBuffer
 from molgym.environment import AbstractMolecularEnvironment
 from molgym.tools.mpi import mpi_avg, mpi_avg_grads, get_num_procs, mpi_sum, mpi_mean_std
 from molgym.tools.util import RolloutSaver, to_numpy, ModelIO, InfoSaver, StructureSaver
-
 
 def compute_loss(ac: AbstractActorCritic, data: dict, clip_ratio: float, vf_coef: float,
                  entropy_coef: float) -> Tuple[torch.Tensor, dict]:
@@ -114,7 +114,11 @@ def rollout(ac: AbstractActorCritic,
         pred = ac.step([obs])
 
         a = to_numpy(pred['a'][0])
-        next_obs, reward, done, _ = env.step(ac.to_action_space(action=a, observation=obs))
+        next_obs, reward, done, info = env.step(ac.to_action_space(action=a, observation=obs))
+
+        if info == 'nan':
+             atoms, _ = env.observation_space.parse(next_obs)
+             io.write('nan-struture.traj', atoms)
 
         buffer.store(obs=obs,
                      act=a,
