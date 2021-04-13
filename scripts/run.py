@@ -63,6 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--network_width', help='width of FC layers', type=int, default=128)
 
     parser.add_argument('--load_model', help='load latest checkpoint file', action='store_true', default=False)
+    parser.add_argument('--loaded_model_name', help='load specific model ', default=None)
     parser.add_argument('--save_freq', help='save model every <n> iterations', type=int, default=5)
     parser.add_argument('--eval_freq', help='evaluate model every <n> iterations', type=int, default=5)
     parser.add_argument('--num_eval_episodes', help='number of episodes per evaluation', type=int, default=None)
@@ -131,7 +132,10 @@ def main() -> None:
 
     util.set_seeds(seed=config['seed'] + mpi.get_proc_rank())
 
-    model_handler = util.ModelIO(directory=config['model_dir'], tag=tag)
+    if config['loaded_model_name'] is not None:
+        model_handler = util.ModelIO(directory=config['model_dir'], tag=config['loaded_model_name'])
+    else:
+        model_handler = util.ModelIO(directory=config['model_dir'], tag=tag)
 
     bag_symbols = config['bag_symbols'].split(',')
     action_space = ActionSpace()

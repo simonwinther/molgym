@@ -8,7 +8,7 @@ from ase import Atoms, Atom
 from xtb.calculators import GFN2
 from ase.calculators.calculator import CalculationFailed
 import numpy as np
-
+import ase.io
 
 class MolecularReward(abc.ABC):
     @abc.abstractmethod
@@ -33,9 +33,9 @@ class InteractionReward(MolecularReward):
         all_atoms.append(new_atom)
 
         try:
-            e_tot = self._convert_ev_to_hartree(self._calculate_energy(all_atoms))
-            e_parts = self._convert_ev_to_hartree(self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom))
-            delta_e = e_tot - e_parts
+            e_tot = self._calculate_energy(all_atoms)
+            e_parts = self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom)
+            delta_e = self._convert_ev_to_hartree(e_tot) - self._convert_ev_to_hartree(e_parts)
 
             elapsed = time.time() - start
 
@@ -45,9 +45,11 @@ class InteractionReward(MolecularReward):
 
             reward = reward - (dist * self.rho)
             if math.isnan(reward):
-                print('{}'.format(e_tot))
-                print('{}'.format(e_parts))
-                print('{}'.format(dist))
+                print('e_tot: {}'.format(e_tot))
+                print('e_parts: {}'.format(e_parts))
+                print('dist: {}'.format(dist))
+                print(atoms)
+                print(atoms.get_positions())
 
         except Exception as e:
             reward = -1.00
@@ -58,7 +60,7 @@ class InteractionReward(MolecularReward):
 
         if math.isnan(reward):
             reward = -1.00
-            info = {'elapsed_time': 'nan' }
+        
         return reward, info
 
     def _calculate_atomic_energy(self, atom: Atom) -> float:

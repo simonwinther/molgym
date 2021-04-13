@@ -114,11 +114,7 @@ def rollout(ac: AbstractActorCritic,
         pred = ac.step([obs])
 
         a = to_numpy(pred['a'][0])
-        next_obs, reward, done, info = env.step(ac.to_action_space(action=a, observation=obs))
-
-        if info == 'nan':
-             atoms, _ = env.observation_space.parse(next_obs)
-             io.write('nan-struture.traj', atoms)
+        next_obs, reward, done, _ = env.step(ac.to_action_space(action=a, observation=obs))
 
         buffer.store(obs=obs,
                      act=a,
