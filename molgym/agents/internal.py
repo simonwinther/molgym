@@ -34,7 +34,7 @@ class InternalAC(AbstractActorCritic):
         self.num_latent = self.num_afeats + self.num_latent_beta
 
         self.converter = spk.AtomsConverter(device=self.device)
-        self.embedding_fn = spk.representation.SchNet(n_atom_basis=self.num_afeats)
+        self.embedding_fn = spk.representation.SchNet(n_atom_basis=self.num_afeats, cutoff=5)
 
         self.phi_beta = MLP(
             input_dim=self.num_zs,

@@ -45,11 +45,10 @@ class InteractionReward(MolecularReward):
 
             reward = reward - (dist * self.rho)
             if math.isnan(reward):
-                print('e_tot: {}'.format(e_tot))
-                print('e_parts: {}'.format(e_parts))
-                print('dist: {}'.format(dist))
+                print('reward is nan')
                 print(atoms)
                 print(atoms.get_positions())
+                reward = -1.00
 
         except Exception as e:
             reward = -1.00

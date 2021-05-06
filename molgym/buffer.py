@@ -94,7 +94,14 @@ class PPOBuffer:
 
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_mean_std(self.adv_buf, axis=-1)
+        if adv_std == 0:
+            adv_std = 1
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
+
+        if np.isnan(self.adv_buf).any():
+            print(adv_mean)
+            print(adv_std)
+            print('get failed ...')
 
         return dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf, adv=self.adv_buf, logp=self.logp_buf)
 

@@ -115,7 +115,7 @@ def main():
 
     ax.legend(loc='lower right')
 
-    fig.savefig(os.path.join(os.getcwd(), 'average_return.pdf'))
+    fig.savefig(os.path.join(os.getcwd(), 'average_return.png'), dpi=300)
 
 
 if __name__ == '__main__':

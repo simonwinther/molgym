@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from torch.optim import Adam
 from ase import io
+import math
 
 from molgym.agents.base import AbstractActorCritic
 from molgym.buffer import PPOBuffer
@@ -52,7 +53,6 @@ def compute_loss(ac: AbstractActorCritic, data: dict, clip_ratio: float, vf_coef
         approx_kl=mpi_avg(to_numpy(approx_kl)).item(),
         clip_fraction=mpi_avg(to_numpy(clip_fraction)).item(),
     )
-
     return loss, info
 
 
