@@ -135,6 +135,14 @@ def setup_simple_logger(path: str, log_level=logging.INFO):
     logger.addHandler(fh)
 
 
+def load_specific_model(model_path) -> AbstractActorCritic:
+    # Load model
+    logging.info(f'Loading model: {model_path}')
+    model = torch.load(f=model_path)
+
+    return model
+
+
 class ModelIO:
     def __init__(self, directory: str, tag: str) -> None:
         self.directory = directory

@@ -70,8 +70,8 @@ def train(ac: AbstractActorCritic, optimizer: Adam, data: Dict[str, torch.Tensor
 
         # Check KL
         if loss_info['approx_kl'] > 1.5 * target_kl:
-            logging.info(f'Early stopping at step {i} due to reaching max KL.')
-            break
+           logging.info(f'Early stopping at step {i} due to reaching max KL.')
+           break
 
         # Take gradient step
         optimizer.zero_grad()

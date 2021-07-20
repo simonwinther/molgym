@@ -22,16 +22,17 @@ class MolecularReward(abc.ABC):
 
 class InteractionReward(MolecularReward):
     def __init__(self, rho) -> None:
-        self.calculator = GFN2()
+        self.calculator = GFN2(max_iterations=50)
         self.atom_energies: Dict[str, float] = {}
         self.rho = rho
 
-    def calculate(self, atoms: Atoms, new_atom: Atom) -> Tuple[float, dict]:
+    def calculate(self, atoms: Atoms, new_atom: Atom, min_reward: float, bag_length: int, refills: int) -> Tuple[float, dict]:
         start = time.time()
 
         all_atoms = atoms.copy()
         all_atoms.append(new_atom)
 
+        #if bag_length == 0 and refills == 0: # final reward
         try:
             e_tot = self._calculate_energy(all_atoms)
             e_parts = self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom)
@@ -44,22 +45,30 @@ class InteractionReward(MolecularReward):
             dist = self._calculate_distance(new_atom)
 
             reward = reward - (dist * self.rho)
+
+            # Used for final reward
+            #reward = (-1 * self._convert_ev_to_hartree(e_tot) / len(all_atoms)) - (dist * self.rho)
+
             if math.isnan(reward):
-                print('reward is nan')
-                print(atoms)
-                print(atoms.get_positions())
+                reward = min_reward
+
+            if reward > 20:
                 reward = -1.00
 
         except Exception as e:
-            reward = -1.00
+            reward = min_reward
             elapsed = time.time() - start
-        info = {
-            'elapsed_time': elapsed,
-        }
+        
+        #else: # final reward
+        #    reward = 0 # final reward
+        #    elapsed = time.time() - start
 
         if math.isnan(reward):
-            reward = -1.00
+            reward = min_reward
         
+        info = {
+                'elapsed_time': elapsed,
+            }
         return reward, info
 
     def _calculate_atomic_energy(self, atom: Atom) -> float:
