@@ -17,7 +17,7 @@ setup(
     name='molgym',
     version=version_dict['__version__'],
     description='',
-    long_description=readme(),
+    long_description='',
     classifiers=['Programming Language :: Python :: 3.6'],
     author='Gregor Simm and Robert Pinsler',
     author_email='gncs2@cam.ac.uk, rp586@cam.ac.uk',

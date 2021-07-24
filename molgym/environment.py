@@ -3,6 +3,8 @@ import itertools
 from typing import Tuple, List
 
 import ase.formula
+from ase.build import molecule
+from ase import io
 import gym
 import numpy as np
 from ase import Atoms, Atom
@@ -13,15 +15,13 @@ from molgym.tools import util
 
 
 class AbstractMolecularEnvironment(gym.Env, abc.ABC):
-    # Negative reward should be on the same order of magnitude as the positive ones.
-    # Memory agent on QM9: mean 0.26, std 0.13, min -0.54, max 1.23 (negative reward indeed possible
-    # but avoidable and probably due to PM6)
-
     def __init__(
         self,
         reward: InteractionReward,
         observation_space: ObservationSpace,
         action_space: ActionSpace,
+        bag_refills: int,
+        initial_formula,
         min_atomic_distance=0.6,  # Angstrom
         max_h_distance=2.0,  # Angstrom
         min_reward=-0.6,  # Hartree
@@ -38,6 +38,11 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
 
         self.current_atoms = Atoms()
         self.current_formula = ase.formula.Formula()
+        self.bag_refills = bag_refills
+        self.initial_formula = initial_formula
+    # Negative reward should be on the same order of magnitude as the positive ones.
+    # Memory agent on QM9: mean 0.26, std 0.13, min -0.54, max 1.23 (negative reward indeed possible
+    # but avoidable and probably due to PM6)
 
     @abc.abstractmethod
     def reset(self) -> ObservationType:
@@ -58,7 +63,7 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
                 {},
             )
 
-        reward, info = self.reward.calculate(self.current_atoms, new_atom)
+        reward, info = self.reward.calculate(self.current_atoms, new_atom, self.min_reward, len(self.current_formula), self.bag_refills)
 
         if reward < self.min_reward:
             done = True
@@ -66,6 +71,10 @@ class AbstractMolecularEnvironment(gym.Env, abc.ABC):
 
         self.current_atoms.append(new_atom)
         self.current_formula = util.remove_from_formula(self.current_formula, new_atom.symbol)
+
+        if len(self.current_formula) == 0 and self.bag_refills > 0:
+            self.current_formula = self.initial_formula[-1]
+            self.bag_refills -= 1
 
         # Check if state is terminal
         if self._is_terminal():
@@ -119,10 +128,18 @@ class MolecularEnvironment(AbstractMolecularEnvironment):
         super().__init__(*args, **kwargs)
 
         self.formulas = formulas
+        self.init_refills = kwargs['bag_refills']
+        self.bag_refills = kwargs['bag_refills']
         self.formulas_cycle = itertools.cycle(formulas)
         self.reset()
 
     def reset(self) -> ObservationType:
-        self.current_atoms = Atoms()
+        # self.current_atoms = molecule('CH3CH2OH') # Ethanol
+        #self.current_atoms = molecule('F')
+        #self.current_atoms.set_initial_charges([-1])
+        self.current_atoms = molecule('CH3OH') # Methanol
+        # self.current_atoms = molecule('H2CO')
+
         self.current_formula = next(self.formulas_cycle)
+        self.bag_refills = self.init_refills
         return self.observation_space.build(self.current_atoms, self.current_formula)

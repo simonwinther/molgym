@@ -69,3 +69,19 @@ class TestEnvironment(TestCase):
         action = self.action_space.from_atom(atom=Atom(symbol='H', position=(0, 1.5, 0)))
         obs, reward, done, info = env.step(action=action)
         self.assertTrue(done)
+
+    def test_refilling(self):
+        formula = Formula('H2O')
+        env = MolecularEnvironment(
+            reward=self.reward,
+            observation_space=self.observation_space,
+            action_space=self.action_space,
+            formulas=[formula],
+            max_h_distance=1.0,
+            bag_refills=5,
+            initial_formula=Formula('H2O'),
+        )
+
+        action = self.action_space.from_atom(atom=Atom(symbol='H', position=(1.0, 0, 0)))
+        obs, reward, done, info = env.step(action=action)
+        self.assertFalse(done)

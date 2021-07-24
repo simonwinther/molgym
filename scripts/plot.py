@@ -41,6 +41,7 @@ def parse_args() -> argparse.Namespace:
                         type=str,
                         choices=['train', 'eval'],
                         default='eval')
+    parser.add_argument('--output', help='filename of output file', required=True)
 
     return parser.parse_args()
 
@@ -115,7 +116,7 @@ def main():
 
     ax.legend(loc='lower right')
 
-    fig.savefig(os.path.join(os.getcwd(), 'average_return.pdf'))
+    fig.savefig(os.path.join(os.getcwd(), args.output + '.png'), dpi=300)
 
 
 if __name__ == '__main__':

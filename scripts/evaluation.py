@@ -11,13 +11,18 @@ from molgym.reward import InteractionReward
 from molgym.spaces import ActionSpace, ObservationSpace
 from molgym.tools import mpi, util
 from molgym.tools.util import RolloutSaver, InfoSaver, parse_formulas, StructureSaver, load_specific_model
+from molgym.buffer import PPOBuffer
+from molgym.ppo import rollout
 
+from ase import io
+
+#--loaded_model_name /home/energy/s153999/methanol_generalization/models/CH3OH_6H2O_from_1_run-3.model --clip_ratio 0.25 --target_kl 0.1 --num_steps_per_iter 4096 --bag_refills 5 --formulas H2O --min_mean_distance 0.9 --max_mean_distance 5.6  --seed=1 --num_steps $steps --vf_coef 1 --canvas_size 125
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Run Agent in MolGym')
 
     # Name and seed
-    parser.add_argument('--name', help='experiment name', required=True)
+    parser.add_argument('--name', help='experiment name', required=False)
     parser.add_argument('--seed', help='run ID', type=int, default=0)
 
     # Directories
@@ -107,86 +112,25 @@ def get_config() -> dict:
     return config
 
 
-def build_model(config: dict, observation_space: ObservationSpace, action_space: ActionSpace) -> AbstractActorCritic:
-    return InternalAC(
-        observation_space=observation_space,
-        action_space=action_space,
-        min_max_distance=(config['min_mean_distance'], config['max_mean_distance']),
-        network_width=config['network_width'],
-        device=torch.device('cpu'),
-    )
-
-
 def main() -> None:
-    util.set_one_thread()
-    # torch.set_num_threads(24)
-
     config = get_config()
-
-    util.create_directories([config['log_dir'], config['model_dir'], config['data_dir'],
-                             config['results_dir'], config['structures_dir']])
-
-    tag = util.get_tag(config)
-    util.setup_logger(config, directory=config['log_dir'], tag=tag)
-    util.save_config(config, directory=config['log_dir'], tag=tag)
-
-    util.set_seeds(seed=config['seed'] + mpi.get_proc_rank())
-
-    model_handler = util.ModelIO(directory=config['model_dir'], tag=tag)
 
     bag_symbols = config['bag_symbols'].split(',')
     action_space = ActionSpace()
     observation_space = ObservationSpace(canvas_size=config['canvas_size'], symbols=bag_symbols)
 
-    start_num_steps = 0
-
-    if config['loaded_model_name']:
-        model = load_specific_model(model_path=config['loaded_model_name'])
-        model.action_space = action_space
-        model.observation_space = observation_space
-    else:
-        if not config['load_model']:
-            model = build_model(config, observation_space=observation_space, action_space=action_space)
-        else:
-            model, start_num_steps = model_handler.load()
-            model.action_space = action_space
-            model.observation_space = observation_space
-
-    mpi.sync_params(model)
-
-    var_counts = util.count_vars(model)
-    logging.info(f'Number of parameters: {var_counts}')
+    model = load_specific_model(model_path=config['loaded_model_name'])
+    model.action_space = action_space
+    model.observation_space = observation_space
 
     reward = InteractionReward(config['rho'])
 
-    # Evaluation formulas
     if not config['eval_formulas']:
         config['eval_formulas'] = config['formulas']
 
-    train_formulas = parse_formulas(config['formulas'])
     eval_formulas = parse_formulas(config['eval_formulas'])
 
-    train_init_formulas = parse_formulas(config['formulas'])
     eval_init_formulas = parse_formulas(config['eval_formulas'])
-
-    logging.info(f'Training bags: {train_formulas}')
-    logging.info(f'Evaluation bags: {eval_formulas}')
-
-    # Number of episodes during evaluation
-    if not config['num_eval_episodes']:
-        config['num_eval_episodes'] = len(eval_formulas)
-
-    env = MolecularEnvironment(
-        reward=reward,
-        observation_space=observation_space,
-        action_space=action_space,
-        formulas=train_formulas,
-        min_atomic_distance=config['min_atomic_distance'],
-        max_h_distance=config['max_h_distance'],
-        min_reward=config['min_reward'],
-        initial_formula=train_init_formulas,
-        bag_refills=config['bag_refills'],
-    )
 
     eval_env = MolecularEnvironment(
         reward=reward,
@@ -200,37 +144,18 @@ def main() -> None:
         bag_refills=config['bag_refills'],
     )
 
-    rollout_saver = RolloutSaver(directory=config['data_dir'], tag=tag, all_ranks=config['all_ranks'])
-    info_saver = InfoSaver(directory=config['results_dir'], tag=tag)
-    image_saver = StructureSaver(directory=config['structures_dir'], tag=tag)
+    eval_buffer_size = 1000
+    eval_buffer = PPOBuffer(int_act_dim=model.internal_action_dim, size=eval_buffer_size, gamma=config['discount'], lam=config['lam'])
 
-    ppo(
-        env=env,
-        eval_env=eval_env,
-        ac=model,
-        gamma=config['discount'],
-        start_num_steps=start_num_steps,
-        max_num_steps=config['max_num_steps'],
-        num_steps_per_iter=config['num_steps_per_iter'],
-        clip_ratio=config['clip_ratio'],
-        learning_rate=config['learning_rate'],
-        vf_coef=config['vf_coef'],
-        entropy_coef=config['entropy_coef'],
-        max_num_train_iters=config['max_num_train_iters'],
-        lam=config['lam'],
-        target_kl=config['target_kl'],
-        gradient_clip=config['gradient_clip'],
-        eval_freq=config['eval_freq'],
-        model_handler=model_handler,
-        save_freq=config['save_freq'],
-        num_eval_episodes=config['num_eval_episodes'],
-        rollout_saver=rollout_saver,
-        save_train_rollout=config['save_rollouts'] == 'train' or config['save_rollouts'] == 'all',
-        save_eval_rollout=config['save_rollouts'] == 'eval' or config['save_rollouts'] == 'all',
-        info_saver=info_saver,
-        structure_saver=image_saver,
-    )
+    with torch.no_grad():
+        model.training = False
+        rollout_info = rollout(model, eval_env, eval_buffer, num_episodes=1)
+        model.training = True
+        logging.info('Evaluation rollout: ' + str(rollout_info))
 
+        atoms, _ = eval_env.observation_space.parse(eval_buffer.next_obs_buf[eval_buffer.ptr-1])
+        print(atoms)
+        io.write('/home/energy/s153999/evaluated_structure.traj', atoms)
 
 if __name__ == '__main__':
     main()

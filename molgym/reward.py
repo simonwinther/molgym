@@ -1,12 +1,14 @@
 import abc
 import time
 from typing import Tuple, Dict
+import math
 
 import ase.data
 from ase import Atoms, Atom
-
-from molgym.calculator import Sparrow
-
+from xtb.calculators import GFN2
+from ase.calculators.calculator import CalculationFailed
+import numpy as np
+import ase.io
 
 class MolecularReward(abc.ABC):
     @abc.abstractmethod
@@ -19,35 +21,54 @@ class MolecularReward(abc.ABC):
 
 
 class InteractionReward(MolecularReward):
-    def __init__(self) -> None:
-        self.calculator = Sparrow('PM6')
-
-        self.settings = {
-            'molecular_charge': 0,
-            'max_scf_iterations': 128,
-            'unrestricted_calculation': 1,
-        }
-
+    def __init__(self, rho) -> None:
+        self.calculator = GFN2(max_iterations=50)
         self.atom_energies: Dict[str, float] = {}
+        self.rho = rho
 
-    def calculate(self, atoms: Atoms, new_atom: Atom) -> Tuple[float, dict]:
+    def calculate(self, atoms: Atoms, new_atom: Atom, min_reward: float, bag_length: int, refills: int) -> Tuple[float, dict]:
         start = time.time()
 
         all_atoms = atoms.copy()
         all_atoms.append(new_atom)
 
-        e_tot = self._calculate_energy(all_atoms)
-        e_parts = self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom)
-        delta_e = e_tot - e_parts
+        #if bag_length == 0 and refills == 0: # final reward
+        try:
+            e_tot = self._calculate_energy(all_atoms)
+            e_parts = self._calculate_energy(atoms) + self._calculate_atomic_energy(new_atom)
+            delta_e = self._convert_ev_to_hartree(e_tot) - self._convert_ev_to_hartree(e_parts)
 
-        elapsed = time.time() - start
+            elapsed = time.time() - start
 
-        reward = -1 * delta_e
+            reward = -1 * delta_e
 
+            dist = self._calculate_distance(new_atom)
+
+            reward = reward - (dist * self.rho)
+
+            # Used for final reward
+            #reward = (-1 * self._convert_ev_to_hartree(e_tot) / len(all_atoms)) - (dist * self.rho)
+
+            if math.isnan(reward):
+                reward = min_reward
+
+            if reward > 20:
+                reward = -1.00
+
+        except Exception as e:
+            reward = min_reward
+            elapsed = time.time() - start
+        
+        #else: # final reward
+        #    reward = 0 # final reward
+        #    elapsed = time.time() - start
+
+        if math.isnan(reward):
+            reward = min_reward
+        
         info = {
-            'elapsed_time': elapsed,
-        }
-
+                'elapsed_time': elapsed,
+            }
         return reward, info
 
     def _calculate_atomic_energy(self, atom: Atom) -> float:
@@ -61,8 +82,12 @@ class InteractionReward(MolecularReward):
         if len(atoms) == 0:
             return 0.0
 
-        self.calculator.set_elements(list(atoms.symbols))
-        self.calculator.set_positions(atoms.positions)
-        self.settings['spin_multiplicity'] = self.get_minimum_spin_multiplicity(atoms)
-        self.calculator.set_settings(self.settings)
-        return self.calculator.calculate_energy()
+        # atoms.calc = self.calculator
+        atoms.set_calculator(self.calculator)
+        return atoms.get_potential_energy()
+
+    def _calculate_distance(self, atom: Atom):
+        return np.linalg.norm((0, 0, 0)-atom.position)
+
+    def _convert_ev_to_hartree(self, energy):
+        return energy/27.2107

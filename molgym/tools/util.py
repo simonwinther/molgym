@@ -6,11 +6,13 @@ import sys
 from typing import Optional, List, Tuple
 
 import ase.formula
+import ase.atoms
 import numpy as np
 import scipy.signal
 import torch
 from ase.formula import Formula
-
+from ase import io
+from ase.atoms import Atoms
 from molgym.agents.base import AbstractActorCritic
 from molgym.tools import mpi
 
@@ -133,6 +135,14 @@ def setup_simple_logger(path: str, log_level=logging.INFO):
     logger.addHandler(fh)
 
 
+def load_specific_model(model_path) -> AbstractActorCritic:
+    # Load model
+    logging.info(f'Loading model: {model_path}')
+    model = torch.load(f=model_path)
+
+    return model
+
+
 class ModelIO:
     def __init__(self, directory: str, tag: str) -> None:
         self.directory = directory
@@ -209,3 +219,14 @@ class InfoSaver:
         with open(path, mode='a') as f:
             f.write(json.dumps(obj))
             f.write('\n')
+
+
+class StructureSaver:
+    def __init__(self, directory: str, tag: str):
+        self.directory = directory
+        self.tag = tag
+        self._suffix = '.traj'
+
+    def save(self, obj: Atoms, name: str):
+        path = os.path.join(self.directory, self.tag + '_' + name + self._suffix)
+        io.write(path, obj)
